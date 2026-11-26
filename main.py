@@ -37,10 +37,6 @@ def get_db_connection():
 # MODELOS PYDANTIC (Validación de entrada)
 # ==========================================
 
-class LoginRequest(BaseModel):
-    correo: str
-    password: str
-
 class AdministradorCreate(BaseModel):
     id_Administrador: int
     Nombre_Administrador: str
@@ -143,8 +139,8 @@ class NotificacionCreate(BaseModel):
 # LOGIN UNIFICADO (ADMIN / CONDUCTOR / PASAJERO)
 # ==========================================
 
-@app.post("/api/login", tags=["Autenticación"])
-def login_usuario(datos: LoginRequest):
+@app.get("/api/login", tags=["Autenticación"])
+def login_usuario(correo: str, password: str):
     connection = get_db_connection()
     try:
         with connection.cursor() as cursor:
@@ -152,7 +148,7 @@ def login_usuario(datos: LoginRequest):
                 """SELECT id_Administrador, Nombre_Administrador, Apellido_Administrador, Correo_Administrador
                    FROM Administrador
                    WHERE Correo_Administrador = %s AND Contraseña_Administrador = %s""",
-                (datos.correo, datos.password)
+                (correo, password)
             )
             admin = cursor.fetchone()
             if admin:
@@ -164,7 +160,7 @@ def login_usuario(datos: LoginRequest):
                    FROM Estudiante e
                    LEFT JOIN Horario h ON e.idHorario1 = h.idHorario
                    WHERE e.Correo_Estudiante = %s AND e.Contraseña = %s""",
-                (datos.correo, datos.password)
+                (correo, password)
             )
             estudiante = cursor.fetchone()
             if estudiante:
@@ -179,7 +175,7 @@ def login_usuario(datos: LoginRequest):
 # ENDPOINT PARA CARGAR DATOS DE PRUEBA
 # ==========================================
 
-@app.post("/api/sembrar-datos-prueba", tags=["Datos de Prueba"])
+@app.get("/api/sembrar-datos-prueba", tags=["Datos de Prueba"])
 def sembrar_datos_prueba():
     connection = get_db_connection()
     try:
@@ -199,10 +195,10 @@ def sembrar_datos_prueba():
             """)
 
             cursor.execute("""
-                INSERT IGNORE INTO Estudiante (NoControl, Nombre_Estudiante, Apellido_Estudiante, Telefono, Cuatrimestre, Colonia, Municipio, CP, Estado, Calle, NoCalle, Contraseña, id_Administrador1, idHorario1)
+                INSERT IGNORE INTO Estudiante (NoControl, Nombre_Estudiante, Apellido_Estudiante, Correo_Estudiante, Rol_Usuario, Telefono, Cuatrimestre, Colonia, Municipio, CP, Estado, Calle, NoCalle, Contraseña, id_Administrador1, idHorario1)
                 VALUES 
-                (2023001, 'Ana', 'Martínez', '4421234567', '4to', 'Centro', 'Querétaro', 76000, 'Querétaro', 'Hidalgo', 12, 'ana12345', 1, 1),
-                (2023002, 'Luis', 'Hernández', '4429876543', '5to', 'Candelaria', 'San Juan del Río', 76800, 'Querétaro', 'Juárez', 45, 'luis12345', 1, 2);
+                (2023001, 'Ana', 'Martínez', 'ana.martinez@loudi.com', 'pasajero', '4421234567', '4to', 'Centro', 'Querétaro', 76000, 'Querétaro', 'Hidalgo', 12, 'ana12345', 1, 1),
+                (2023002, 'Luis', 'Hernández', 'luis.hernandez@loudi.com', 'conductor', '4429876543', '5to', 'Candelaria', 'San Juan del Río', 76800, 'Querétaro', 'Juárez', 45, 'luis12345', 1, 2);
             """)
 
             cursor.execute("""
