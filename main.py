@@ -9,7 +9,7 @@ from datetime import date, time
 app = FastAPI(
     title="API de LoUDI",
     description="API REST con todas las tablas y relaciones de la base de datos LoUDI",
-    version="2.1"
+    version="2.2"
 )
 
 # Habilitar CORS para conectar desde app móvil o web sin bloqueos
