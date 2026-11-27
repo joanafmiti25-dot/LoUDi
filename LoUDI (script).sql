@@ -214,3 +214,93 @@ CREATE TABLE IF NOT EXISTS Reporte (
     FOREIGN KEY (NoControl_Reportado) REFERENCES Estudiante(NoControl) ON DELETE SET NULL ON UPDATE SET NULL,
     FOREIGN KEY (idViaje1) REFERENCES Viaje(idViaje) ON DELETE SET NULL ON UPDATE SET NULL
 ) ENGINE=InnoDB;
+
+-- LoUDi: migración incremental para MySQL 8/Aiven.
+-- Ejecutar sobre la base existente. No elimina tablas ni registros.
+
+ALTER TABLE Horario
+    MODIFY COLUMN idHorario INT NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE Estudiante
+    ADD COLUMN Estado_Cuenta ENUM('activo','bloqueado') NOT NULL DEFAULT 'activo',
+    ADD COLUMN Intentos_Fallidos INT NOT NULL DEFAULT 0,
+    ADD COLUMN Bloqueado_Hasta DATETIME NULL,
+    ADD COLUMN Reportes INT NOT NULL DEFAULT 0,
+    ADD COLUMN Fecha_Registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ADD COLUMN Contraseña_Hash VARCHAR(255) NULL,
+    MODIFY COLUMN Contraseña VARCHAR(255) NULL;
+
+ALTER TABLE Administrador
+    ADD COLUMN Contraseña_Hash VARCHAR(255) NULL,
+    MODIFY COLUMN Contraseña_Administrador VARCHAR(255) NULL,
+    MODIFY COLUMN id_Administrador INT NOT NULL AUTO_INCREMENT,
+    ADD UNIQUE KEY uq_administrador_correo (Correo_Administrador);
+
+ALTER TABLE Viaje
+    ADD COLUMN Fecha_Hora_Salida DATETIME NULL,
+    MODIFY COLUMN Estado ENUM(
+        'Disponible','Publicado','Lleno','EnCurso','Finalizado','Cancelado'
+    ) NOT NULL DEFAULT 'Publicado',
+    MODIFY COLUMN idViaje INT NOT NULL AUTO_INCREMENT;
+
+UPDATE Viaje SET Estado = 'Publicado' WHERE Estado = 'Disponible';
+
+ALTER TABLE Viaje
+    MODIFY COLUMN Estado ENUM(
+        'Publicado','Lleno','EnCurso','Finalizado','Cancelado'
+    ) NOT NULL DEFAULT 'Publicado';
+
+ALTER TABLE Vehiculo
+    ADD COLUMN Marca VARCHAR(60) NOT NULL DEFAULT '',
+    MODIFY COLUMN idVehiculo INT NOT NULL AUTO_INCREMENT,
+    ADD CONSTRAINT chk_vehiculo_capacidad
+        CHECK (Capacidad_Pasajeros BETWEEN 1 AND 4);
+
+ALTER TABLE Pago
+    MODIFY COLUMN IdPago INT NOT NULL AUTO_INCREMENT;
+
+-- El índice de IdVehiculo1 se conserva para mantener un vehículo por relación.
+-- Solo se quita la unicidad del conductor para permitir varios vehículos.
+ALTER TABLE Posee DROP INDEX IdConductor1;
+
+UPDATE Solicita
+    SET Estado_Reserva = 'confirmada'
+    WHERE Estado_Reserva = 'completada';
+
+ALTER TABLE Solicita
+    MODIFY COLUMN Estado_Reserva ENUM(
+        'pendiente','confirmada','rechazada','cancelada'
+    ) NOT NULL DEFAULT 'pendiente';
+
+CREATE TABLE IF NOT EXISTS Bitacora_Admin (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    id_Administrador INT NOT NULL,
+    NoControl_Afectado INT NOT NULL,
+    Accion ENUM('bloqueo','desbloqueo') NOT NULL,
+    Fecha DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_bitacora_admin
+        FOREIGN KEY (id_Administrador)
+        REFERENCES Administrador(id_Administrador),
+    CONSTRAINT fk_bitacora_estudiante
+        FOREIGN KEY (NoControl_Afectado)
+        REFERENCES Estudiante(NoControl)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS Sesion (
+    idSesion BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    Id_Administrador INT NULL,
+    NoControl INT NULL,
+    Token_Hash CHAR(64) NOT NULL UNIQUE,
+    Expira DATETIME NOT NULL,
+    Revocada TINYINT(1) NOT NULL DEFAULT 0,
+    Fecha_Creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_sesion_admin FOREIGN KEY (Id_Administrador)
+        REFERENCES Administrador(id_Administrador) ON DELETE CASCADE,
+    CONSTRAINT fk_sesion_estudiante FOREIGN KEY (NoControl)
+        REFERENCES Estudiante(NoControl) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE INDEX idx_sesion_expira ON Sesion(Expira, Revocada);
+CREATE INDEX idx_viaje_salida_estado ON Viaje(Fecha_Hora_Salida, Estado);
+CREATE INDEX idx_solicita_viaje_estado ON Solicita(IdViaje1, Estado_Reserva);
+CREATE INDEX idx_solicita_pasajero_estado ON Solicita(IdPasajero1, Estado_Reserva);
