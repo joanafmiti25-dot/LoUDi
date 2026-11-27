@@ -979,7 +979,15 @@ def crear_administrador(
 def obtener_horarios():
     with db_cursor() as cursor:
         cursor.execute("SELECT idHorario,Turno,HoraEntrada,HoraSalida FROM Horario")
-        return cursor.fetchall()
+        filas = cursor.fetchall()
+        return [
+            {
+                **fila,
+                "HoraEntrada": _hora_python(fila["HoraEntrada"]),
+                "HoraSalida": _hora_python(fila["HoraSalida"]),
+            }
+            for fila in filas
+        ]
 
 
 @app.post(
