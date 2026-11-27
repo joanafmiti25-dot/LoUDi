@@ -304,3 +304,18 @@ CREATE INDEX idx_sesion_expira ON Sesion(Expira, Revocada);
 CREATE INDEX idx_viaje_salida_estado ON Viaje(Fecha_Hora_Salida, Estado);
 CREATE INDEX idx_solicita_viaje_estado ON Solicita(IdViaje1, Estado_Reserva);
 CREATE INDEX idx_solicita_pasajero_estado ON Solicita(IdPasajero1, Estado_Reserva);
+
+SELECT TABLE_NAME, COLUMN_NAME, COLUMN_TYPE, EXTRA
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA = DATABASE()
+  AND (
+    (TABLE_NAME = 'Estudiante' AND COLUMN_NAME IN
+      ('Estado_Cuenta','Intentos_Fallidos','Bloqueado_Hasta','Reportes','Fecha_Registro'))
+    OR (TABLE_NAME = 'Viaje' AND COLUMN_NAME = 'Fecha_Hora_Salida')
+    OR (TABLE_NAME = 'Vehiculo' AND COLUMN_NAME = 'Marca')
+    OR (TABLE_NAME = 'Solicita' AND COLUMN_NAME = 'Estado_Reserva')
+  )
+ORDER BY TABLE_NAME, COLUMN_NAME;
+
+SHOW TABLES LIKE 'Bitacora_Admin';
+SHOW INDEX FROM Posee;
